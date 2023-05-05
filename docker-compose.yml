@@ -1,0 +1,40 @@
+version: '3'
+
+services:
+  nginx:
+    image: nginx:1.13
+    ports:
+      - 80:80
+    restart: always
+    volumes:
+      - ./devops/nginx.conf:/etc/nginx/conf.d/default.conf
+    depends_on:
+      - web
+  
+  web:
+    image: registry.gitlab.com/khaitranquang/django-rest-base:latest
+    build:
+      context: .
+    container_name: web
+    ports:
+      - '9001:9001'
+    command: bash -c 'gunicorn -w 5 -t 90 -b 0.0.0.0:9001 server_config.wsgi:application --capture-output --log-level=info'
+    depends_on:
+      - ecafe_db
+    env_file: .env
+    links:
+      - ecafe_db
+
+  ecafe_db:
+    image: mysql:8.0
+    container_name: ecafe_db
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      - MYSQL_DATABASE=ecafe
+    volumes:
+      - ecafe_db:/var/lib/mysql
+    command: '--default-authentication-plugin=mysql_native_password'
+   
+volumes:
+  ecafe_db:
